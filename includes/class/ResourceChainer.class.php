@@ -7,7 +7,7 @@ class ResourceChainer
 
     public function __construct()
     {
-        add_action('wp_head', array($this, 'do_wp_head'), 2);
+        add_action('wp_head', array($this, 'do_wp_head'), 4);
         add_action('wp_footer', array($this, 'do_wp_footer'), 15);
     }
 
@@ -18,11 +18,11 @@ class ResourceChainer
 
     public function do_wp_head()
     {
-        $this->do_wp_head_styles();
         $this->do_wp_head_scripts();
+        $this->do_wp_head_styles();
     }
 
-    private function do_wp_footer_scripts()
+    public function do_wp_footer_scripts()
     {
         global $wp_scripts;
 
@@ -60,12 +60,12 @@ class ResourceChainer
             $hash,
             WPRC_CACHE_URL . $hash . '.js',
             array(),
-            false,
+            null,
             true
         );
     }
 
-    private function do_wp_head_scripts()
+    public function do_wp_head_scripts()
     {
         global $wp_scripts;
 
@@ -100,12 +100,12 @@ class ResourceChainer
             $hash,
             WPRC_CACHE_URL . $hash . '.js',
             array(),
-            false,
+            null,
             false
         );
     }
 
-    private function do_wp_head_styles()
+    public function do_wp_head_styles()
     {
         global $wp_styles;
 
@@ -124,7 +124,7 @@ class ResourceChainer
 
         $this->build_cache(WPRC_CACHE_PATH . $hash . '.css', $styles);
 
-        wp_register_style($hash, WPRC_CACHE_URL . $hash . '.css');
+        wp_register_style($hash, WPRC_CACHE_URL . $hash . '.css', array(), null);
         wp_enqueue_style($hash);
     }
 
@@ -136,7 +136,7 @@ class ResourceChainer
 
         global $wp_styles;
 
-        $handle = fopen($filename, 'w');
+        $file_content = '';
 
         foreach ($items as $item) {
             $file_url = $wp_styles->_css_href($item->src, $item->ver, $item->handle);
@@ -145,20 +145,19 @@ class ResourceChainer
             $file_base_url = explode('/', $file_url);
             array_pop($file_base_url);
             $file_base_url = implode('/', $file_base_url) . '/';
-            $item_content = $this->unitize_urls($item_content, $file_base_url);
+            $item_content = $this->unitize_css_urls($item_content, $file_base_url);
 
-            $header = '/*' . "\n";
-            $header .= ' * ' . $item->src . "\n";
-            $header .= ' */' . "\n";
-            fwrite($handle, $header);
-            fwrite($handle, $item_content);
-            fwrite($handle, "\n\n");
+            $file_content .= '/*' . "\n";
+            $file_content .= ' * ' . $item->src . "\n";
+            $file_content .= ' */' . "\n";
+            $file_content .= $item_content;
+            $file_content .= "\n\n";
         }
 
-        fclose($handle);
+        file_put_contents($filename, $file_content);
     }
 
-    private function unitize_urls($content, $base_url)
+    private function unitize_css_urls($content, $base_url)
     {
         $content = preg_replace_callback(
             '/url\(["|\']?([^"\'\)]*)["|\']?\)/i',
