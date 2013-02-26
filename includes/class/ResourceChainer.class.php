@@ -3,8 +3,6 @@ namespace wprc;
 
 class ResourceChainer
 {
-    private $printed_scripts = array();
-
     public function __construct()
     {
         add_action('wp_head', array($this, 'do_wp_head'), 4);
@@ -13,59 +11,17 @@ class ResourceChainer
 
     public function do_wp_footer()
     {
-        $this->do_wp_footer_scripts();
+        $this->do_styles(true);
+        $this->do_scripts(true);
     }
 
     public function do_wp_head()
     {
-        $this->do_wp_head_styles();
-        $this->do_wp_head_scripts();
+        $this->do_styles();
+        $this->do_scripts();
     }
 
-    public function do_wp_footer_scripts()
-    {
-        global $wp_scripts;
-
-        // Get the queue
-        $queue = $wp_scripts->queue;
-        $scripts = array();
-
-        // Preprocess dependencies
-        // TODO recurse deeper than one level
-        // TODO move into own function
-        foreach ($queue as $item) {
-            $queue = array_merge($wp_scripts->registered[$item]->deps, $queue);
-        }
-        $queue = array_unique($queue);
-
-        foreach ($queue as $item) {
-            if (in_array($item, $this->printed_scripts)) {
-                continue;
-            }
-            $item = $wp_scripts->registered[$item];
-            if (!isset($item->extra['group']) && $item->extra['group'] !== 1) {
-                continue;
-            }
-            $wp_scripts->done[] = $item->handle;
-            $wp_scripts->print_extra_script($item->handle);
-            $scripts[] = $item;
-        }
-
-        // Get hash
-        $hash = sha1(serialize($scripts));
-
-        $this->build_cache(WPRC_CACHE_PATH . $hash . '.js', $scripts);
-
-        wp_enqueue_script(
-            $hash,
-            WPRC_CACHE_URL . $hash . '.js',
-            array(),
-            null,
-            true
-        );
-    }
-
-    public function do_wp_head_scripts()
+    public function do_scripts($in_footer = false)
     {
         global $wp_scripts;
 
@@ -81,31 +37,43 @@ class ResourceChainer
 
         foreach ($queue as $item) {
             $item = $wp_scripts->registered[$item];
-            if (isset($item->extra['group']) && $item->extra['group'] === 1) {
-                continue;
+            if (!$in_footer) {
+                if (isset($item->extra['group']) && $item->extra['group'] === 1) {
+                    continue;
+                }
+            } else {
+                if (
+                    in_array($item->handle, $wp_scripts->done) ||
+                    (!isset($item->extra['group']) &&
+                    $item->extra['group'] !== 1)
+                ) {
+                    continue;
+                }
             }
             $wp_scripts->done[] = $item->handle;
             $scripts[] = $item;
-            $wp_scripts->print_extra_script($item->handle);
-            $this->printed_scripts[] = $item->handle;
+        }
+
+        if (empty($scripts)) {
+            return;
         }
 
         // Get hash
         $hash = sha1(serialize($scripts));
-        $this->printed_scripts[] = $hash;
+        // Create cache file
+        $this->build_cache(WPRC_CACHE_PATH . $hash . '.js', $scripts, false);
 
-        $this->build_cache(WPRC_CACHE_PATH . $hash . '.js', $scripts);
-
+        // Add script
         wp_enqueue_script(
             $hash,
             WPRC_CACHE_URL . $hash . '.js',
             array(),
             null,
-            false
+            $in_footer
         );
     }
 
-    public function do_wp_head_styles()
+    public function do_styles($in_footer = false)
     {
         global $wp_styles;
 
@@ -115,8 +83,26 @@ class ResourceChainer
 
         // Dequeue styles
         foreach ($queue as $item) {
-            $wp_styles->done[] = $item;
-            $styles[] = $wp_styles->registered[$item];
+            $item = $wp_styles->registered[$item];
+            if (!$in_footer) {
+                if (isset($item->extra['group']) && $item->extra['group'] === 1) {
+                    continue;
+                }
+            } else {
+                if (
+                    in_array($item->handle, $wp_styles->done) ||
+                    (!isset($item->extra['group']) &&
+                    $item->extra['group'] !== 1)
+                ) {
+                    continue;
+                }
+            }
+            $wp_styles->done[] = $item->handle;
+            $styles[] = $item;
+        }
+
+        if (empty($styles)) {
+            return;
         }
 
         // Get hash
@@ -124,17 +110,17 @@ class ResourceChainer
 
         $this->build_cache(WPRC_CACHE_PATH . $hash . '.css', $styles);
 
-        wp_register_style($hash, WPRC_CACHE_URL . $hash . '.css', array(), null);
+        wp_register_style($hash, WPRC_CACHE_URL . $hash . '.css', array(), null, $in_footer);
         wp_enqueue_style($hash);
     }
 
-    private function build_cache($filename, $items)
+    private function build_cache($filename, $items, $is_style = true)
     {
         if (file_exists($filename)) {
             return;
         }
 
-        global $wp_styles;
+        global $wp_styles, $wp_scripts;
 
         $file_content = '';
 
@@ -145,11 +131,20 @@ class ResourceChainer
             $file_base_url = explode('/', $file_url);
             array_pop($file_base_url);
             $file_base_url = implode('/', $file_base_url) . '/';
-            $item_content = $this->unitize_css_urls($item_content, $file_base_url);
+            if ($is_style) {
+                $item_content = $this->unitize_css_urls($item_content, $file_base_url);
+            }
 
             $file_content .= '/*' . "\n";
             $file_content .= ' * ' . $item->src . "\n";
             $file_content .= ' */' . "\n";
+
+            if (!$is_style) {
+                if ($output = $wp_scripts->get_data($item->handle, 'data')) {
+                    $file_content .= $output . "\n";
+                }
+            }
+
             $file_content .= $item_content;
             $file_content .= "\n";
         }
