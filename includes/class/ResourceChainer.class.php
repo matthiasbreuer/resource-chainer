@@ -18,8 +18,8 @@ class ResourceChainer
 
     public function do_wp_head()
     {
-        $this->do_wp_head_scripts();
         $this->do_wp_head_styles();
+        $this->do_wp_head_scripts();
     }
 
     public function do_wp_footer_scripts()
@@ -151,7 +151,7 @@ class ResourceChainer
             $file_content .= ' * ' . $item->src . "\n";
             $file_content .= ' */' . "\n";
             $file_content .= $item_content;
-            $file_content .= "\n\n";
+            $file_content .= "\n";
         }
 
         file_put_contents($filename, $file_content);
