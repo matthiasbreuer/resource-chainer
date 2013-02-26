@@ -1,11 +1,11 @@
 <?php
 /*
   Plugin Name: WordPress Resource Chainer
-  Plugin URI: http://matthiasbreuer.com
+  Plugin URI: http://www.matthiasbreuer.com
   Description: Merges your JavaScript and CSS files into one file
   Version: 1.0.0
   Author: Matthias Breuer
-  Author URI: http://matthiasbreuer.com
+  Author URI: http://www.matthiasbreuer.com
   License: All rights reserved
 */
 
