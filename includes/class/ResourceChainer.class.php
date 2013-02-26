@@ -25,15 +25,11 @@ class ResourceChainer
     {
         global $wp_scripts;
 
-        // Get the queue
-        $queue = $wp_scripts->queue;
-        $scripts = array();
-
         // Preprocess dependencies
-        foreach ($queue as $item) {
-            $queue = array_merge($wp_scripts->registered[$item]->deps, $queue);
-        }
-        $queue = array_unique($queue);
+        $wp_scripts->all_deps($wp_scripts->queue);
+
+        $scripts = array();
+        $queue = $wp_scripts->to_do;
 
         foreach ($queue as $item) {
             $item = $wp_scripts->registered[$item];
@@ -42,15 +38,12 @@ class ResourceChainer
                     continue;
                 }
             } else {
-                if (
-                    in_array($item->handle, $wp_scripts->done) ||
-                    (!isset($item->extra['group']) &&
-                    $item->extra['group'] !== 1)
-                ) {
+                if (in_array($item->handle, $wp_scripts->done)) {
                     continue;
                 }
             }
             $wp_scripts->done[] = $item->handle;
+            unset($wp_scripts->to_do[$item->handle]);
             $scripts[] = $item;
         }
 
@@ -89,11 +82,7 @@ class ResourceChainer
                     continue;
                 }
             } else {
-                if (
-                    in_array($item->handle, $wp_styles->done) ||
-                    (!isset($item->extra['group']) &&
-                    $item->extra['group'] !== 1)
-                ) {
+                if (in_array($item->handle, $wp_styles->done)) {
                     continue;
                 }
             }
