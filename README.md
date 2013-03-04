@@ -1,2 +1,0 @@
-wp-resource-chainer
-===================
