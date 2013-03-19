@@ -89,6 +89,9 @@ class Resource_Chainer
 			) {
 				continue;
 			}
+			if ( isset( $item->extra[ 'conditional' ] ) ) {
+				continue;
+			}
 			if ( ! $in_footer ) {
 				if ( isset( $item->extra[ 'group' ] ) && 1 === $item->extra[ 'group' ] ) {
 					continue;
