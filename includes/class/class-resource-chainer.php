@@ -72,6 +72,8 @@ class Resource_Chainer
 			null,
 			$in_footer
 		);
+		array_pop( $wp_scripts->queue );
+		array_unshift( $wp_scripts->queue, $hash );
 	}
 
 	public function do_styles( $in_footer = false )
@@ -115,6 +117,8 @@ class Resource_Chainer
 
 		wp_register_style( $hash, WPRC_CACHE_URL . $hash . '.css', array(), null, $in_footer );
 		wp_enqueue_style( $hash );
+		array_pop( $wp_styles->queue );
+		array_unshift( $wp_styles->queue, $hash );
 	}
 
 	private function build_cache( $filename, $items, $is_style = true )
