@@ -1,7 +1,5 @@
 <?php
-namespace wprc;
-
-class Resource_Chainer
+class WPRC_Resource_Chainer
 {
 	public $domain_base;
 
@@ -184,7 +182,7 @@ class Resource_Chainer
 			function ( $matches ) use ( $base_url ) {
 				$src = $matches[ 1 ];
 				if ( ! preg_match( '|^(https?:)?//|', $src ) ) {
-					$src = \wprc\rel2abs( $src, $base_url );
+					$src = WPRC_Resource_Chainer::rel2abs( $src, $base_url );
 				}
 
 				return 'url(' . $src . ');';
@@ -193,5 +191,50 @@ class Resource_Chainer
 		);
 
 		return $content;
+	}
+
+	/**
+	 * http://stackoverflow.com/questions/4444475/transfrom-relative-path-into-absolute-url-using-php
+	 *
+	 * @param $rel
+	 * @param $base
+	 *
+	 * @return string
+	 */
+	public static function rel2abs( $rel, $base )
+	{
+		/* return if already absolute URL */
+		if ( parse_url( $rel, PHP_URL_SCHEME ) != '' ) {
+			return $rel;
+		}
+
+		/* queries and anchors */
+		if ( $rel[ 0 ] == '#' || $rel[ 0 ] == '?' ) {
+			return $base . $rel;
+		}
+
+		/* parse base URL and convert to local variables:
+		   $scheme, $host, $path */
+		extract( parse_url( $base ) );
+
+		/* remove non-directory element from path */
+		$path = preg_replace( '#/[^/]*$#', '', $path );
+
+		/* destroy path if relative url points to root */
+		if ( $rel[ 0 ] == '/' ) {
+			$path = '';
+		}
+
+		/* dirty absolute URL */
+		$abs = "$host$path/$rel";
+
+		/* replace '//' or '/./' or '/foo/../' with '/' */
+		$re = array( '#(/\.?/)#', '#/(?!\.\.)[^/]+/\.\./#' );
+		for ( $n = 1; $n > 0; $abs = preg_replace( $re, '/', $abs, - 1, $n ) ) {
+		}
+
+		/* absolute URL is ready! */
+
+		return $scheme . '://' . $abs;
 	}
 }
