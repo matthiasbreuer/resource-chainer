@@ -152,8 +152,20 @@ class Resource_Chainer
 				}
 			}
 
+			if ( $is_style ) {
+				$item_content = apply_filters( 'wprc_style_item', $item_content );
+			} else {
+				$item_content = apply_filters( 'wprc_script_item', $item_content );
+			}
+
 			$file_content .= $item_content;
 			$file_content .= "\n";
+		}
+
+		if ( $is_style ) {
+			$file_content = apply_filters( 'wprc_combined_styles', $file_content );
+		} else {
+			$file_content = apply_filters( 'wprc_combined_scripts', $file_content );
 		}
 
 		file_put_contents( $filename, $file_content );
