@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WordPress Resource Chainer
  * Plugin URI: https://github.com/matthiasbreuer/wp-resource-chainer
- * Description: Merges your JavaScript and CSS resources each into a single file for faster load time
+ * Description: Combines your JavaScript and CSS resources into one file for faster page loads
  * Author: Matthias Breuer
  * Author URI: http://www.matthiasbreuer.com
  * Version: 1.0.0
