@@ -3,8 +3,10 @@ namespace wprc;
 
 /**
  * http://stackoverflow.com/questions/4444475/transfrom-relative-path-into-absolute-url-using-php
+ *
  * @param $rel
  * @param $base
+ *
  * @return string
  */
 function rel2abs( $rel, $base )
@@ -15,7 +17,9 @@ function rel2abs( $rel, $base )
 	}
 
 	/* queries and anchors */
-	if ( $rel[ 0 ] == '#' || $rel[ 0 ] == '?' ) return $base . $rel;
+	if ( $rel[ 0 ] == '#' || $rel[ 0 ] == '?' ) {
+		return $base . $rel;
+	}
 
 	/* parse base URL and convert to local variables:
 	   $scheme, $host, $path */
@@ -25,7 +29,9 @@ function rel2abs( $rel, $base )
 	$path = preg_replace( '#/[^/]*$#', '', $path );
 
 	/* destroy path if relative url points to root */
-	if ( $rel[ 0 ] == '/' ) $path = '';
+	if ( $rel[ 0 ] == '/' ) {
+		$path = '';
+	}
 
 	/* dirty absolute URL */
 	$abs = "$host$path/$rel";
@@ -36,5 +42,6 @@ function rel2abs( $rel, $base )
 	}
 
 	/* absolute URL is ready! */
+
 	return $scheme . '://' . $abs;
 }

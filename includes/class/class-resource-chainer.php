@@ -180,10 +180,12 @@ class Resource_Chainer
 				if ( ! preg_match( '|^(https?:)?//|', $src ) ) {
 					$src = \wprc\rel2abs( $src, $base_url );
 				}
+
 				return 'url(' . $src . ');';
 			},
 			$content
 		);
+
 		return $content;
 	}
 }
