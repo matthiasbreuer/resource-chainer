@@ -52,13 +52,16 @@ class Resource_Chainer
 					continue;
 				}
 			}
-			$wp_scripts->done[ ] = $item->handle;
-			unset( $wp_scripts->to_do[ $item->handle ] );
 			$scripts[ ] = $item;
 		}
 
-		if ( empty( $scripts ) ) {
+		if ( count( $scripts ) < 2 ) {
 			return;
+		}
+
+		foreach ( $scripts as $item ) {
+			$wp_scripts->done[ ] = $item->handle;
+			unset( $wp_scripts->to_do[ $item->handle ] );
 		}
 
 		$hash = sha1( serialize( $scripts ) );
@@ -103,20 +106,23 @@ class Resource_Chainer
 					continue;
 				}
 			}
-			$wp_styles->done[ ] = $item->handle;
-			$styles[ ]          = $item;
+			$styles[ ] = $item;
 		}
 
-		if ( empty( $styles ) ) {
+		if ( count( $styles ) < 2 ) {
 			return;
+		}
+
+		foreach ( $styles as $item ) {
+			$wp_styles->done[ ] = $item->handle;
+			unset( $wp_styles->to_do[ $item->handle ] );
 		}
 
 		$hash = sha1( serialize( $styles ) );
 
 		$this->build_cache( WPRC_CACHE_PATH . $hash . '.css', $styles );
 
-		wp_register_style( $hash, WPRC_CACHE_URL . $hash . '.css', array(), null, $in_footer );
-		wp_enqueue_style( $hash );
+		wp_enqueue_style( $hash, WPRC_CACHE_URL . $hash . '.css', array(), null );
 		array_pop( $wp_styles->queue );
 		array_unshift( $wp_styles->queue, $hash );
 	}
