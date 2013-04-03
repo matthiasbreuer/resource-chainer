@@ -133,6 +133,10 @@ class WPRC_Resource_Chainer
 
 		global $wp_styles, $wp_scripts;
 
+		if ( ! file_exists( WPRC_CACHE_PATH ) ) {
+			mkdir( WPRC_CACHE_PATH );
+		}
+
 		$file_content = '';
 
 		foreach ( $items as $item ) {

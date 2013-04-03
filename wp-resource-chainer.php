@@ -14,9 +14,14 @@
  */
 
 define( 'WPRC_PATH', plugin_dir_path( __FILE__ ) );
-define( 'WPRC_CACHE_PATH', WPRC_PATH . 'cache/' );
 define( 'WPRC_URL', plugins_url() . '/wp-resource-chainer/' );
-define( 'WPRC_CACHE_URL', WPRC_URL . 'cache/' );
+if ( ! is_multisite() ) {
+	define( 'WPRC_CACHE_PATH', WPRC_PATH . 'cache/' );
+	define( 'WPRC_CACHE_URL', WPRC_URL . 'cache/' );
+} else {
+	define( 'WPRC_CACHE_PATH', WPRC_PATH . 'cache/' . get_current_blog_id() . '/' );
+	define( 'WPRC_CACHE_URL', WPRC_URL . 'cache/' . get_current_blog_id() . '/' );
+}
 
 if ( ! is_admin() ) {
 	if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
