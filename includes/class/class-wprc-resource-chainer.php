@@ -182,14 +182,14 @@ class WPRC_Resource_Chainer
 	private function unitize_css_urls( $content, $base_url )
 	{
 		$content = preg_replace_callback(
-			'/url\(["|\']?([^"\'\)]*)["|\']?\)/i',
+			'/url\([\s"|\']*([^\s"\']*)["|\'\s]*\)/i',
 			function ( $matches ) use ( $base_url ) {
 				$src = $matches[ 1 ];
 				if ( ! preg_match( '|^(https?:)?//|', $src ) ) {
 					$src = WPRC_Resource_Chainer::rel2abs( $src, $base_url );
 				}
 
-				return 'url(' . $src . ');';
+				return 'url(' . $src . ')';
 			},
 			$content
 		);
