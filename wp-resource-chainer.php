@@ -5,7 +5,7 @@
  * Description: Combines your JavaScript and CSS resources into one file for faster page loads
  * Author: Matthias Breuer
  * Author URI: http://www.matthiasbreuer.com
- * Version: 1.0.0
+ * Version: 1.0.0-rc1
  * Network: true
  * Text Domain: wp-resource-chainer
  * Domain Path: /lang
@@ -25,6 +25,6 @@ if ( ! is_multisite() ) {
 
 if ( ! is_admin() ) {
 	if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
-		require_once ( WPRC_PATH . 'includes/frontend.php' );
+		require_once( WPRC_PATH . 'includes/frontend.php' );
 	}
 }
