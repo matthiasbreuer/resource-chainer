@@ -1,4 +1,4 @@
-=== WordPress Resource Chainer ===
+=== Resource Chainer ===
 Contributors: matthiasbreuer
 Donate link: http://example.com/
 Tags:
