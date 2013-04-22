@@ -1,13 +1,13 @@
 <?php
 /**
- * Plugin Name: WordPress Resource Chainer
- * Plugin URI: https://github.com/matthiasbreuer/wp-resource-chainer
+ * Plugin Name: Resource Chainer
+ * Plugin URI: https://github.com/matthiasbreuer/resource-chainer
  * Description: Combines your JavaScript and CSS resources into one file for faster page loads
  * Author: Matthias Breuer
  * Author URI: http://www.matthiasbreuer.com
- * Version: 1.0.0-rc1
+ * Version: 1.0.0-rc2
  * Network: true
- * Text Domain: wp-resource-chainer
+ * Text Domain: resource-chainer
  * Domain Path: /lang
  * License: The MIT License
  * License URI: http://opensource.org/licenses/MIT
