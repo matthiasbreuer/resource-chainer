@@ -15,6 +15,7 @@
 
 define( 'WPRC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WPRC_URL', plugin_dir_url( __FILE__ ) );
+
 if ( ! is_multisite() ) {
 	define( 'WPRC_CACHE_PATH', WPRC_PATH . 'cache/' );
 	define( 'WPRC_CACHE_URL', WPRC_URL . 'cache/' );
