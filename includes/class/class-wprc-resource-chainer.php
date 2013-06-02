@@ -2,6 +2,8 @@
 class WPRC_Resource_Chainer
 {
 	public $domain_base;
+	public $ignore_scripts = array( 'admin-bar' );
+	public $ignore_styles = array( 'admin-bar' );
 
 	public function __construct()
 	{
@@ -35,6 +37,10 @@ class WPRC_Resource_Chainer
 		$queue   = $wp_scripts->to_do;
 
 		foreach ( $queue as $item ) {
+			if ( in_array( $item, $this->ignore_scripts ) ) {
+				continue;
+			}
+
 			$item = $wp_scripts->registered[ $item ];
 			if ( preg_match( '/^(https?:)?\/\//', $item->src ) === 1
 				&& strpos( $item->src, $this->domain_base ) === false
@@ -86,6 +92,10 @@ class WPRC_Resource_Chainer
 		$styles = array();
 
 		foreach ( $queue as $item ) {
+			if ( in_array( $item, $this->ignore_styles ) ) {
+				continue;
+			}
+
 			$item = $wp_styles->registered[ $item ];
 			if ( preg_match( '/^(https?:)?\/\//', $item->src ) === 1
 				&& strpos( $item->src, $this->domain_base ) === false
