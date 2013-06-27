@@ -11,20 +11,16 @@ class WPRC_Resource_Chainer
 			$this->domain_base = $matches[ 3 ];
 		}
 
-		add_action( 'wp_head', array( $this, 'do_wp_head' ), 4 );
-		add_action( 'wp_footer', array( $this, 'do_wp_footer' ), 15 );
+		add_action( 'wp_print_styles', array( $this, 'do_styles' ), 0 );
+		add_action( 'wp_print_scripts', array( $this, 'do_scripts' ), 0 );
+		add_action( 'wp_print_footer_scripts', array( $this, 'do_footer_scripts' ), 0 );
 	}
 
-	public function do_wp_footer()
+
+	public function do_footer_scripts()
 	{
 		$this->do_styles( true );
 		$this->do_scripts( true );
-	}
-
-	public function do_wp_head()
-	{
-		$this->do_styles();
-		$this->do_scripts();
 	}
 
 	public function do_scripts( $in_footer = false )
@@ -37,11 +33,21 @@ class WPRC_Resource_Chainer
 		$queue   = $wp_scripts->to_do;
 
 		foreach ( $queue as $item ) {
-			if ( in_array( $item, $this->ignore_scripts ) ) {
+			$item = $wp_scripts->registered[ $item ];
+
+			if ( ! $item->src ) {
+				$wp_scripts->done[ ] = $item->handle;
 				continue;
 			}
 
-			$item = $wp_scripts->registered[ $item ];
+			if ( in_array( $item->handle, $wp_scripts->done, true ) ) {
+				continue;
+			}
+
+			if ( in_array( $item->handle, apply_filters( 'wprc_ignore_scripts', $this->ignore_scripts ) ) ) {
+				continue;
+			}
+
 			if ( preg_match( '/^(https?:)?\/\//', $item->src ) === 1
 				&& strpos( $item->src, $this->domain_base ) === false
 			) {
@@ -51,11 +57,8 @@ class WPRC_Resource_Chainer
 				if ( isset( $item->extra[ 'group' ] ) && 1 === $item->extra[ 'group' ] ) {
 					continue;
 				}
-			} else {
-				if ( in_array( $item->handle, $wp_scripts->done ) ) {
-					continue;
-				}
 			}
+
 			$scripts[ ] = $item;
 		}
 
@@ -87,52 +90,63 @@ class WPRC_Resource_Chainer
 	{
 		global $wp_styles;
 
+		$wp_styles->all_deps( $wp_styles->queue );
+
 		// Get the queue
-		$queue  = $wp_styles->queue;
+		$queue  = $wp_styles->to_do;
 		$styles = array();
 
 		foreach ( $queue as $item ) {
-			if ( in_array( $item, $this->ignore_styles ) ) {
+			$item = $wp_styles->registered[ $item ];
+
+			if ( in_array( $item->handle, $wp_styles->done, true ) || isset( $item->extra[ 'conditional' ] ) ) {
 				continue;
 			}
 
-			$item = $wp_styles->registered[ $item ];
+			if ( in_array( $item->handle, apply_filters( 'wprc_ingore_styles', $this->ignore_styles ) ) ) {
+				continue;
+			}
+
 			if ( preg_match( '/^(https?:)?\/\//', $item->src ) === 1
 				&& strpos( $item->src, $this->domain_base ) === false
 			) {
 				continue;
 			}
-			if ( isset( $item->extra[ 'conditional' ] ) ) {
-				continue;
-			}
+
 			if ( ! $in_footer ) {
 				if ( isset( $item->extra[ 'group' ] ) && 1 === $item->extra[ 'group' ] ) {
 					continue;
 				}
-			} else {
-				if ( in_array( $item->handle, $wp_styles->done ) ) {
-					continue;
-				}
 			}
-			$styles[ ] = $item;
+
+			if ( ! $item->args ) {
+				$item->args = 'all';
+			}
+
+			if ( ! isset( $styles[ $item->args ] ) ) {
+				$styles[ $item->args ] = array();
+			}
+			$styles[ $item->args ][ ] = $item;
 		}
 
-		if ( count( $styles ) < 2 ) {
-			return;
+		foreach ( $styles as $media => $style_group ) {
+			if ( count( $style_group ) < 2 ) {
+				return;
+			}
+
+			foreach ( $style_group as $item ) {
+				$wp_styles->done[ ] = $item->handle;
+				unset( $wp_styles->to_do[ $item->handle ] );
+			}
+
+			$hash = sha1( serialize( $style_group ) );
+
+			$this->build_cache( WPRC_CACHE_PATH . $hash . '.css', $style_group );
+
+			wp_enqueue_style( $hash, WPRC_CACHE_URL . $hash . '.css', array(), null, $media );
+			array_pop( $wp_styles->queue );
+			array_unshift( $wp_styles->queue, $hash );
 		}
-
-		foreach ( $styles as $item ) {
-			$wp_styles->done[ ] = $item->handle;
-			unset( $wp_styles->to_do[ $item->handle ] );
-		}
-
-		$hash = sha1( serialize( $styles ) );
-
-		$this->build_cache( WPRC_CACHE_PATH . $hash . '.css', $styles );
-
-		wp_enqueue_style( $hash, WPRC_CACHE_URL . $hash . '.css', array(), null );
-		array_pop( $wp_styles->queue );
-		array_unshift( $wp_styles->queue, $hash );
 	}
 
 	private function build_cache( $filename, $items, $is_style = true )
@@ -148,8 +162,12 @@ class WPRC_Resource_Chainer
 		}
 
 		$file_content = '';
+		$file_prepend = '';
 
 		foreach ( $items as $item ) {
+			if ( ! $item->src ) {
+				continue;
+			}
 			$file_url     = $wp_styles->_css_href( $item->src, $item->ver, $item->handle );
 			$item_content = file_get_contents( $file_url );
 
@@ -157,7 +175,8 @@ class WPRC_Resource_Chainer
 			array_pop( $file_base_url );
 			$file_base_url = implode( '/', $file_base_url ) . '/';
 			if ( $is_style ) {
-				$item_content = $this->unitize_css_urls( $item_content, $file_base_url );
+				$item_content = $this->fix_css_imports( $item_content, $file_base_url );
+				$item_content = $this->fix_css_urls( $item_content, $file_base_url );
 			}
 
 			$file_content .= '/*' . "\n";
@@ -165,8 +184,10 @@ class WPRC_Resource_Chainer
 			$file_content .= ' */' . "\n";
 
 			if ( ! $is_style ) {
+				// Stop bad scripts
+				$file_content .= ';';
 				if ( $output = $wp_scripts->get_data( $item->handle, 'data' ) ) {
-					$file_content .= $output . "\n";
+					$file_prepend .= $output . "\n";
 				}
 			}
 
@@ -176,9 +197,17 @@ class WPRC_Resource_Chainer
 				$item_content = apply_filters( 'wprc_script_item', $item_content );
 			}
 
+			if ( $is_style ) {
+				if ( $output = $wp_scripts->get_data( $item->handle, 'after' ) ) {
+					$file_content .= $output . "\n";
+				}
+			}
+
 			$file_content .= $item_content;
 			$file_content .= "\n";
 		}
+
+		$file_content = $file_prepend . $file_content;
 
 		if ( $is_style ) {
 			$file_content = apply_filters( 'wprc_combined_styles', $file_content );
@@ -189,10 +218,28 @@ class WPRC_Resource_Chainer
 		file_put_contents( $filename, $file_content );
 	}
 
-	private function unitize_css_urls( $content, $base_url )
+	private function fix_css_imports( $content, $base_url )
 	{
 		$content = preg_replace_callback(
-			'/url\([\s"|\']*([^\s"\']*)["|\'\s]*\)/i',
+			'/@import (url\s?\()?[\s"|\']*([^\s"\']*)["|\'\s]*\)?/i',
+			function ( $matches ) use ( $base_url ) {
+				$src = $matches[ 2 ];
+				if ( ! preg_match( '|^(https?:)?//|', $src ) ) {
+					$src = WPRC_Resource_Chainer::rel2abs( $src, $base_url );
+				}
+
+				return '@import url(' . $src . ')';
+			},
+			$content
+		);
+
+		return $content;
+	}
+
+	private function fix_css_urls( $content, $base_url )
+	{
+		$content = preg_replace_callback(
+			'/url\s?\([\s"|\']*([^\s"\']*)["|\'\s]*\)/i',
 			function ( $matches ) use ( $base_url ) {
 				$src = $matches[ 1 ];
 				if ( ! preg_match( '|^(https?:)?//|', $src ) ) {
