@@ -101,9 +101,8 @@ class WPRC_Resource_Chainer
 		$wp_styles->all_deps( $wp_styles->queue );
 		$ignore_styles = apply_filters( 'rc_ingore_styles', $this->ignore_styles );
 
-		// Get the queue
-		$queue  = $wp_styles->to_do;
 		$styles = array();
+		$queue  = $wp_styles->to_do;
 
 		foreach ( $queue as $handle ) {
 			$item = $wp_styles->registered[ $handle ];
@@ -207,7 +206,7 @@ class WPRC_Resource_Chainer
 				$item_content = $this->fix_css_urls( $item_content, $file_base_url );
 			}
 
-			$file_content .= "/**\n";
+			$file_content .= "/*\n";
 			$file_content .= " * {$item->src}\n";
 			$file_content .= " */\n";
 
