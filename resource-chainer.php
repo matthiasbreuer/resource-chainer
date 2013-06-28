@@ -5,7 +5,7 @@
  * Description: Combines your JavaScript and CSS resources into one file for faster page loads
  * Author: Matthias Breuer
  * Author URI: http://www.matthiasbreuer.com
- * Version: 1.0.0-rc3
+ * Version: 1.0.0-rc4
  * Network: true
  * Text Domain: resource-chainer
  * Domain Path: /lang
@@ -27,7 +27,8 @@ if ( ! is_multisite() ) {
 
 if ( ! is_admin() ) {
 	if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
-		require_once( WPRC_PATH . 'includes/frontend.php' );
+		require_once( WPRC_PATH . 'includes/class-wprc-resource-chainer.php' );
+		new WPRC_Resource_Chainer();
 	}
 }
 
@@ -43,8 +44,8 @@ function wprc_deactivate()
 	wp_clear_scheduled_hook( 'wprc_clear_cache' );
 }
 
-add_filter( 'cron_schedules', 'cron_add_weekly' );
-function cron_add_weekly( $schedules )
+add_filter( 'cron_schedules', 'wprc_cron_add_weekly' );
+function wprc_cron_add_weekly( $schedules )
 {
 	$schedules[ 'weekly' ] = array(
 		'interval' => 604800,
@@ -57,9 +58,9 @@ function cron_add_weekly( $schedules )
 add_action( 'wprc_clear_cache', 'wprc_clear_cache' );
 function wprc_clear_cache()
 {
-	if ( $handle = WPRC_CACHE_PATH ) {
-		$curr_time = time();
-		$files     = array();
+	$max_cached_files = apply_filters( 'wprc_max_cached_files', 25 );
+	if ( $handle = opendir( WPRC_CACHE_PATH ) ) {
+		$files = array();
 		while ( false !== ( $file = readdir( $handle ) ) ) {
 			if ( $file == "." || $file == ".." || $file == '.htaccess' ) {
 				continue;
@@ -68,17 +69,17 @@ function wprc_clear_cache()
 		}
 		closedir( $handle );
 
-		if ( count( $files ) > 30 ) {
-			usort( $files, 'wprc_order_by_date_modified' );
+		if ( count( $files ) > $max_cached_files ) {
+			usort( $files, 'wprc_order_by_modified' );
 
-			for ( $i = 0; $i < count( $files ) - 30; $i ++ ) {
+			for ( $i = 0; $i < count( $files ) - $max_cached_files; $i ++ ) {
 				unlink( WPRC_CACHE_PATH . $files[ $i ] );
 			}
 		}
 	}
 }
 
-function wprc_order_by_date_modified( $a, $b )
+function wprc_order_by_modified( $a, $b )
 {
 	$a_time = filemtime( WPRC_CACHE_PATH . $a );
 	$b_time = filemtime( WPRC_CACHE_PATH . $b );

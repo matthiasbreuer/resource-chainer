@@ -32,19 +32,22 @@ class WPRC_Resource_Chainer
 		$scripts = array();
 		$queue   = $wp_scripts->to_do;
 
-		foreach ( $queue as $item ) {
-			$item = $wp_scripts->registered[ $item ];
+		foreach ( $queue as $handle ) {
+			$item = $wp_scripts->registered[ $handle ];
 
 			if ( ! $item->src ) {
 				$wp_scripts->done[ ] = $item->handle;
 				continue;
 			}
 
-			if ( in_array( $item->handle, $wp_scripts->done, true ) ) {
+			if ( in_array( $handle, $wp_scripts->done, true ) ) {
 				continue;
 			}
 
-			if ( in_array( $item->handle, apply_filters( 'wprc_ignore_scripts', $this->ignore_scripts ) ) ) {
+			if (
+				in_array( $handle, apply_filters( 'wprc_ignore_scripts', $this->ignore_scripts ) )
+				|| apply_filters( 'wprc_ignore_script', $handle ) === true
+			) {
 				continue;
 			}
 
@@ -96,14 +99,17 @@ class WPRC_Resource_Chainer
 		$queue  = $wp_styles->to_do;
 		$styles = array();
 
-		foreach ( $queue as $item ) {
-			$item = $wp_styles->registered[ $item ];
+		foreach ( $queue as $handle ) {
+			$item = $wp_styles->registered[ $handle ];
 
-			if ( in_array( $item->handle, $wp_styles->done, true ) || isset( $item->extra[ 'conditional' ] ) ) {
+			if ( in_array( $handle, $wp_styles->done, true ) || isset( $item->extra[ 'conditional' ] ) ) {
 				continue;
 			}
 
-			if ( in_array( $item->handle, apply_filters( 'wprc_ingore_styles', $this->ignore_styles ) ) ) {
+			if (
+				in_array( $handle, apply_filters( 'wprc_ingore_styles', $this->ignore_styles ) )
+				|| apply_filters( 'wprc_ignore_style', $handle ) === true
+			) {
 				continue;
 			}
 
@@ -162,7 +168,6 @@ class WPRC_Resource_Chainer
 		}
 
 		$file_content = '';
-		$file_prepend = '';
 
 		foreach ( $items as $item ) {
 			if ( ! $item->src ) {
@@ -179,35 +184,32 @@ class WPRC_Resource_Chainer
 				$item_content = $this->fix_css_urls( $item_content, $file_base_url );
 			}
 
-			$file_content .= '/*' . "\n";
-			$file_content .= ' * ' . $item->src . "\n";
-			$file_content .= ' */' . "\n";
+			$file_content .= "/**\n";
+			$file_content .= " * {$item->src}\n";
+			$file_content .= " */\n";
 
 			if ( ! $is_style ) {
-				// Stop bad scripts
+				// Stop malformed scripts
 				$file_content .= ';';
 				if ( $output = $wp_scripts->get_data( $item->handle, 'data' ) ) {
-					$file_prepend .= $output . "\n";
+					$file_content .= "{$output}\n";
 				}
 			}
 
 			if ( $is_style ) {
-				$item_content = apply_filters( 'wprc_style_item', $item_content );
+				$file_content .= apply_filters( 'wprc_style_item', $item_content );
 			} else {
-				$item_content = apply_filters( 'wprc_script_item', $item_content );
+				$file_content .= apply_filters( 'wprc_script_item', $item_content );
 			}
 
 			if ( $is_style ) {
 				if ( $output = $wp_scripts->get_data( $item->handle, 'after' ) ) {
-					$file_content .= $output . "\n";
+					$file_content .= "{$output}\n";
 				}
 			}
 
-			$file_content .= $item_content;
 			$file_content .= "\n";
 		}
-
-		$file_content = $file_prepend . $file_content;
 
 		if ( $is_style ) {
 			$file_content = apply_filters( 'wprc_combined_styles', $file_content );
