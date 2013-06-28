@@ -28,6 +28,7 @@ class WPRC_Resource_Chainer
 		global $wp_scripts;
 
 		$wp_scripts->all_deps( $wp_scripts->queue );
+		$ignore_scripts = apply_filters( 'rc_ignore_scripts', $this->ignore_scripts );
 
 		$scripts = array();
 		$queue   = $wp_scripts->to_do;
@@ -36,7 +37,7 @@ class WPRC_Resource_Chainer
 			$item = $wp_scripts->registered[ $handle ];
 
 			if ( ! $item->src ) {
-				$wp_scripts->done[ ] = $item->handle;
+				$wp_scripts->done[ ] = $handle;
 				continue;
 			}
 
@@ -45,8 +46,8 @@ class WPRC_Resource_Chainer
 			}
 
 			if (
-				in_array( $handle, apply_filters( 'wprc_ignore_scripts', $this->ignore_scripts ) )
-				|| apply_filters( 'wprc_ignore_script', $handle ) === true
+				in_array( $handle, $ignore_scripts )
+				|| apply_filters( 'rc_ignore_script', false, $handle ) === true
 			) {
 				continue;
 			}
@@ -56,6 +57,7 @@ class WPRC_Resource_Chainer
 			) {
 				continue;
 			}
+
 			if ( ! $in_footer ) {
 				if ( isset( $item->extra[ 'group' ] ) && 1 === $item->extra[ 'group' ] ) {
 					continue;
@@ -74,13 +76,16 @@ class WPRC_Resource_Chainer
 			unset( $wp_scripts->to_do[ $item->handle ] );
 		}
 
-		$hash = sha1( serialize( $scripts ) );
+		$hash = $this->create_hash( $scripts );
+		$this->build_cache( RC_CACHE_PATH . $hash . '.js', $scripts, false );
 
-		$this->build_cache( WPRC_CACHE_PATH . $hash . '.js', $scripts, false );
+		foreach ( $scripts as $script ) {
+			$wp_scripts->print_extra_script( $script->handle );
+		}
 
 		wp_enqueue_script(
 			$hash,
-			WPRC_CACHE_URL . $hash . '.js',
+			RC_CACHE_URL . $hash . '.js',
 			array(),
 			null,
 			$in_footer
@@ -94,6 +99,7 @@ class WPRC_Resource_Chainer
 		global $wp_styles;
 
 		$wp_styles->all_deps( $wp_styles->queue );
+		$ignore_styles = apply_filters( 'rc_ingore_styles', $this->ignore_styles );
 
 		// Get the queue
 		$queue  = $wp_styles->to_do;
@@ -102,13 +108,18 @@ class WPRC_Resource_Chainer
 		foreach ( $queue as $handle ) {
 			$item = $wp_styles->registered[ $handle ];
 
+			if ( ! $item->src ) {
+				$wp_styles->done[ ] = $handle;
+				continue;
+			}
+
 			if ( in_array( $handle, $wp_styles->done, true ) || isset( $item->extra[ 'conditional' ] ) ) {
 				continue;
 			}
 
 			if (
-				in_array( $handle, apply_filters( 'wprc_ingore_styles', $this->ignore_styles ) )
-				|| apply_filters( 'wprc_ignore_style', $handle ) === true
+				in_array( $handle, $ignore_styles )
+				|| apply_filters( 'rc_ignore_style', false, $handle ) === true
 			) {
 				continue;
 			}
@@ -145,14 +156,29 @@ class WPRC_Resource_Chainer
 				unset( $wp_styles->to_do[ $item->handle ] );
 			}
 
-			$hash = sha1( serialize( $style_group ) );
+			$hash = $this->create_hash( $style_group );
+			$this->build_cache( RC_CACHE_PATH . $hash . '.css', $style_group );
 
-			$this->build_cache( WPRC_CACHE_PATH . $hash . '.css', $style_group );
-
-			wp_enqueue_style( $hash, WPRC_CACHE_URL . $hash . '.css', array(), null, $media );
+			wp_enqueue_style( $hash, RC_CACHE_URL . $hash . '.css', array(), null, $media );
 			array_pop( $wp_styles->queue );
 			array_unshift( $wp_styles->queue, $hash );
 		}
+	}
+
+	private function create_hash( $items )
+	{
+		$hash = array();
+
+		foreach ( $items as $item ) {
+			$hash[ ] = array(
+				'handle' => $item->handle,
+				'src'    => $item->src,
+				'ver'    => $item->ver,
+				'deps'   => $item->deps,
+			);
+		}
+
+		return md5( serialize( $hash ) );
 	}
 
 	private function build_cache( $filename, $items, $is_style = true )
@@ -163,16 +189,13 @@ class WPRC_Resource_Chainer
 
 		global $wp_styles, $wp_scripts;
 
-		if ( ! file_exists( WPRC_CACHE_PATH ) ) {
-			mkdir( WPRC_CACHE_PATH );
+		if ( ! file_exists( RC_CACHE_PATH ) ) {
+			mkdir( RC_CACHE_PATH );
 		}
 
 		$file_content = '';
 
 		foreach ( $items as $item ) {
-			if ( ! $item->src ) {
-				continue;
-			}
 			$file_url     = $wp_styles->_css_href( $item->src, $item->ver, $item->handle );
 			$item_content = file_get_contents( $file_url );
 
@@ -191,30 +214,21 @@ class WPRC_Resource_Chainer
 			if ( ! $is_style ) {
 				// Stop malformed scripts
 				$file_content .= ';';
-				if ( $output = $wp_scripts->get_data( $item->handle, 'data' ) ) {
-					$file_content .= "{$output}\n";
-				}
 			}
 
 			if ( $is_style ) {
-				$file_content .= apply_filters( 'wprc_style_item', $item_content );
+				$file_content .= apply_filters( 'rc_style_item', $item_content );
 			} else {
-				$file_content .= apply_filters( 'wprc_script_item', $item_content );
-			}
-
-			if ( $is_style ) {
-				if ( $output = $wp_scripts->get_data( $item->handle, 'after' ) ) {
-					$file_content .= "{$output}\n";
-				}
+				$file_content .= apply_filters( 'rc_script_item', $item_content );
 			}
 
 			$file_content .= "\n";
 		}
 
 		if ( $is_style ) {
-			$file_content = apply_filters( 'wprc_combined_styles', $file_content );
+			$file_content = apply_filters( 'rc_combined_styles', $file_content );
 		} else {
-			$file_content = apply_filters( 'wprc_combined_scripts', $file_content );
+			$file_content = apply_filters( 'rc_combined_scripts', $file_content );
 		}
 
 		file_put_contents( $filename, $file_content );

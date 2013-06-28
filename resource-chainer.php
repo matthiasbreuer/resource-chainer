@@ -2,10 +2,10 @@
 /**
  * Plugin Name: Resource Chainer
  * Plugin URI: https://github.com/matthiasbreuer/resource-chainer
- * Description: Combines your JavaScript and CSS resources into one file for faster page loads
+ * Description: Concatenates JavaScript and CSS resources into less files for faster page loads and better caching.
  * Author: Matthias Breuer
  * Author URI: http://www.matthiasbreuer.com
- * Version: 1.0.0-rc4
+ * Version: 1.0.0-rc5
  * Network: true
  * Text Domain: resource-chainer
  * Domain Path: /lang
@@ -14,38 +14,38 @@
  */
 
 
-define( 'WPRC_PATH', plugin_dir_path( __FILE__ ) );
-define( 'WPRC_URL', plugin_dir_url( __FILE__ ) );
+define( 'RC_PATH', plugin_dir_path( __FILE__ ) );
+define( 'RC_URL', plugin_dir_url( __FILE__ ) );
 
 if ( ! is_multisite() ) {
-	define( 'WPRC_CACHE_PATH', WPRC_PATH . 'cache/' );
-	define( 'WPRC_CACHE_URL', WPRC_URL . 'cache/' );
+	define( 'RC_CACHE_PATH', RC_PATH . 'cache/' );
+	define( 'RC_CACHE_URL', RC_URL . 'cache/' );
 } else {
-	define( 'WPRC_CACHE_PATH', WPRC_PATH . 'cache/' . get_current_blog_id() . '/' );
-	define( 'WPRC_CACHE_URL', WPRC_URL . 'cache/' . get_current_blog_id() . '/' );
+	define( 'RC_CACHE_PATH', RC_PATH . 'cache/' . get_current_blog_id() . '/' );
+	define( 'RC_CACHE_URL', RC_URL . 'cache/' . get_current_blog_id() . '/' );
 }
 
 if ( ! is_admin() ) {
-	if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
-		require_once( WPRC_PATH . 'includes/class-wprc-resource-chainer.php' );
+	if ( true || ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+		require_once( RC_PATH . 'includes/class-wprc-resource-chainer.php' );
 		new WPRC_Resource_Chainer();
 	}
 }
 
-register_activation_hook( __FILE__, 'wprc_activate' );
-function wprc_activate()
+register_activation_hook( __FILE__, 'rc_activate' );
+function rc_activate()
 {
-	wp_schedule_event( time(), 'weekly', 'wprc_clear_cache' );
+	wp_schedule_event( time(), 'weekly', 'rc_clear_cache' );
 }
 
-register_deactivation_hook( __FILE__, 'wprc_deactivate' );
-function wprc_deactivate()
+register_deactivation_hook( __FILE__, 'rc_deactivate' );
+function rc_deactivate()
 {
-	wp_clear_scheduled_hook( 'wprc_clear_cache' );
+	wp_clear_scheduled_hook( 'rc_clear_cache' );
 }
 
-add_filter( 'cron_schedules', 'wprc_cron_add_weekly' );
-function wprc_cron_add_weekly( $schedules )
+add_filter( 'cron_schedules', 'rc_cron_add_weekly' );
+function rc_cron_add_weekly( $schedules )
 {
 	$schedules[ 'weekly' ] = array(
 		'interval' => 604800,
@@ -55,11 +55,11 @@ function wprc_cron_add_weekly( $schedules )
 	return $schedules;
 }
 
-add_action( 'wprc_clear_cache', 'wprc_clear_cache' );
-function wprc_clear_cache()
+add_action( 'rc_clear_cache', 'rc_clear_cache' );
+function rc_clear_cache()
 {
-	$max_cached_files = apply_filters( 'wprc_max_cached_files', 25 );
-	if ( $handle = opendir( WPRC_CACHE_PATH ) ) {
+	$max_cached_files = apply_filters( 'rc_max_cached_files', 25 );
+	if ( $handle = opendir( RC_CACHE_PATH ) ) {
 		$files = array();
 		while ( false !== ( $file = readdir( $handle ) ) ) {
 			if ( $file == "." || $file == ".." || $file == '.htaccess' ) {
@@ -70,19 +70,19 @@ function wprc_clear_cache()
 		closedir( $handle );
 
 		if ( count( $files ) > $max_cached_files ) {
-			usort( $files, 'wprc_order_by_modified' );
+			usort( $files, 'rc_order_by_modified' );
 
 			for ( $i = 0; $i < count( $files ) - $max_cached_files; $i ++ ) {
-				unlink( WPRC_CACHE_PATH . $files[ $i ] );
+				unlink( RC_CACHE_PATH . $files[ $i ] );
 			}
 		}
 	}
 }
 
-function wprc_order_by_modified( $a, $b )
+function rc_order_by_modified( $a, $b )
 {
-	$a_time = filemtime( WPRC_CACHE_PATH . $a );
-	$b_time = filemtime( WPRC_CACHE_PATH . $b );
+	$a_time = filemtime( RC_CACHE_PATH . $a );
+	$b_time = filemtime( RC_CACHE_PATH . $b );
 
 	if ( $a_time == $b_time ) {
 		return 0;
