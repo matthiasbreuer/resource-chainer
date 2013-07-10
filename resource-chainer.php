@@ -26,7 +26,7 @@ if ( ! is_multisite() ) {
 }
 
 if ( ! is_admin() ) {
-	if ( true || ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+	if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
 		require_once( RC_PATH . 'includes/class-wprc-resource-chainer.php' );
 		new WPRC_Resource_Chainer();
 	}
