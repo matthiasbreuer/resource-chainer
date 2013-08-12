@@ -2,7 +2,7 @@
 class WPRC_Resource_Chainer
 {
 	public $domain_base;
-	public $ignore_scripts = array( 'admin-bar' );
+	public $ignore_scripts = array( 'admin-bar', 'comment-reply' );
 	public $ignore_styles = array( 'admin-bar' );
 
 	public function __construct()
