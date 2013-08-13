@@ -26,9 +26,9 @@ if ( ! is_multisite() ) {
 }
 
 if ( ! is_admin() ) {
-	if ( ! defined( 'WP_DEBUG' )
-		|| ! WP_DEBUG
-		|| ! in_array(
+	if (
+		( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG )
+		&& ! in_array(
 			$GLOBALS[ 'pagenow' ],
 			array( 'wp-login.php', 'wp-register.php' )
 		)
