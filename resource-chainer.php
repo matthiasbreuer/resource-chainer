@@ -26,7 +26,13 @@ if ( ! is_multisite() ) {
 }
 
 if ( ! is_admin() ) {
-	if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+	if ( ! defined( 'WP_DEBUG' )
+		|| ! WP_DEBUG
+		|| ! in_array(
+			$GLOBALS[ 'pagenow' ],
+			array( 'wp-login.php', 'wp-register.php' )
+		)
+	) {
 		require_once( RC_PATH . 'includes/class-wprc-resource-chainer.php' );
 		new WPRC_Resource_Chainer();
 	}
