@@ -5,7 +5,7 @@
  * Description: Concatenates JavaScript and CSS resources into less files for faster page loads and better caching.
  * Author: Matthias Breuer
  * Author URI: http://www.matthiasbreuer.com
- * Version: 1.0.2
+ * Version: 1.0.3
  * Network: true
  * Text Domain: resource-chainer
  * Domain Path: /lang
